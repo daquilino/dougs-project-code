@@ -1,10 +1,26 @@
 /*			**************** NOTES *************************
+							TO DO
+	-----------------------------------------------------	
+	Possible Issues:
+		1.) New Search Keeps Previous Markers.
+		2.) Inherent issue with yelp radius search. If business "service area" or "delivery area"
+		is within your search radius. Business shows up in search.
 		
-			drop marker function.
+	
+	------------------------------------------------------	
+		
 
 
-			queryYelp
 
+
+
+		Validate Inputs.	
+		Check if variable need to be global 
+
+		Directions
+			save current location.
+
+		
 
 */
 
@@ -13,16 +29,14 @@
 ===============================================================================*/
 
 
-
-
-//latitude initally set to middle of US
-var latitude;// = 39.8282;
-var longitude;// = -98.5795;
+var latitude;
+var longitude;
 var radius;
 var postalCode;
 
 //This is the map on the page.
 var map; //TEST CODE marker1
+var geoFlag = false;
 
 
 /*==============================================================================
@@ -43,30 +57,26 @@ $(document).ready(function()
 		var locationInput = $("#locationInput").val().trim();        
 		//var radius ="&radius=" + radius from pull down menu
 
-
+	
 		//hard coded for testing
-		 searchTerm = "pizza"; //TEST CODE
+		 //searchTerm = "pizza"; //TEST CODE
 		 //place = "&location=08833";	//TEST CODE
-		 var radius = 8064; //TEST CODE
+		 var radius = 5; //TEST CODE
 
 		
 		//if locationInput is blank, use zip from geolocation in search.
 		if(locationInput === "")
 		{
 			place = postalCode;
+			geoFlag = true;
 		}
 		else
 		{
-			place = loactionInput;
+			place = locationInput;
+			geoFlag = false;
 		}
-			
-	
-		
+					
 		queryYelp(searchTerm, place, radius);
-
-		
-		//addMarker(latitude, longitude);//TEST For Marker
-		
 
 
 	});//END #submitTopic.on("click")
@@ -75,54 +85,41 @@ $(document).ready(function()
 
 
 //========================================= runGoogle Query ===============================
+	
+
+
+	/*Yelp search query is sorted by 'rating' in which "The rating sort is not strictly sorted by 
+	the rating value, but by an adjusted rating value that takes into account the number of 
+	ratings, similar to a bayesian average. This is so a business with 1 rating of 5 stars 
+	doesn’t immediately jump to the top.". 
+	*/
 	function queryYelp(searchTerm, place, radius) 
 	{	
 
-
 		const YELP_HEROKU_ENDPOINT = "https://floating-fortress-53764.herokuapp.com/"
 
-		var queryURL = YELP_HEROKU_ENDPOINT + "?term=" + searchTerm + "&location="+ place + "&radius="+ radius;
+		var queryURL = YELP_HEROKU_ENDPOINT + "?term=" + searchTerm + "&location="+ place + "&radius="+ radiusToMeters(radius);
 	
 	console.log("queryURL: " + queryURL);
 
 		$.ajax({
 		      url: queryURL,
 		      method: "GET"
-		    }).done(function(response) {
+	    }).done(function(response) {
 
-		    	var yelpBusinessesArray = JSON.parse(response).businesses;
-		    	
-		    	console.log("yelpBusinessesArray");
-		    	console.log(yelpBusinessesArray);
+	    	var yelpBusinessesArray = JSON.parse(response).businesses;
+test(yelpBusinessesArray);
+	    	//contains object data of first element 'best' in response.businesses
+	    	var best = yelpBusinessesArray[0];
 
-		    	test(yelpBusinessesArray);
+	    	if(!geoFlag)
+	    	{
+	    		drawMap(best.coordinates.latitude, best.coordinates.longitude, radius); 
+	    	}
+	    	addMarker(best, searchTerm);
 
-		    });
-
-
-
-//============================ old code below here ==============
-//=================================================================================		
-		// .done (function(response)
-		// {
-
-		// 	latitude = response.results[0].geometry.location.lat;
-		// 	longitude = response.results[0].geometry.location.lng;
-
-		// 	var coordinates = latitude + "," + longitude;
-			
-		// 	var zoom = 15; //this will change depending on radius
-
-
-		// 	drawMap(latitude, longitude, radius);
-			
-		// 	addMarker(latitude, longitude, locationInfo);
-
-		// });//END ajax geocodeUrl	
-		
-	}//END runGoogleQuery 
-
-
+	    });
+	}//END queryYelp()
 //============================= drawMap =============================================
 
 
@@ -133,8 +130,8 @@ function drawMap(latitude, longitude, radius)
 	
 	var zoom = radiusToZoom(radius);
 
-	//var
-	map = new google.maps.Map(document.getElementById('map'),       //TEST CODE marker1 add var back
+	
+	map = new google.maps.Map(document.getElementById('map'),
 	{
 		zoom: zoom,
 		center: uluru
@@ -215,7 +212,7 @@ function revGeoCode()
 {
 
 	const GOOGLE_GEOCODE_ENDPOINT = "https://maps.googleapis.com/maps/api/geocode/json?latlng=";
-	const GOOGLE_API_KEY = "&key=AIzaSyCisdCKvECDpmY8Cm1_GK6W2-8PhCDUobg";
+	const GOOGLE_API_KEY = "&key=AIzaSyDr-DLJtSliHGOsZhoI76ETn6jsk8kVYGo";
 	
 	//corrdinates string used in endpoint from latitude and longitude
 	var coordinates = latitude + "," + longitude;
@@ -239,38 +236,41 @@ function revGeoCode()
 //=============================================================================
 
 
-function addMarker(	businessInfo)//locationInfo object containing 
+function addMarker(bestData, searchTerm)
 {
-	var uluru = {lat: latitude, lng: longitude};
+	
+	var uluru = {lat: bestData.coordinates.latitude, lng: bestData.coordinates.longitude};
 
 	var marker = new google.maps.Marker({
-    position: uluru,
-    map: map,
-    
-    //different icon TEST CODE
-    //icon:'ribbon-sm.png',
-    //animation:google.maps.Animation.BOUNCE
-	
+	    
+	    position: uluru,
+	    map: map
+
+	    
+	    //different icon TEST CODE
+	    //icon:'assets/images/ribbon-sm.png',
+	    //animation:google.maps.Animation.BOUNCE
 	});//END marker
+
 
  
   	var infoWindowData = 
-    	'<div class="infoWindow">'+
-   		'<div id="siteNotice">'+
-   		
-   		'</div>'+
-   		
-   		'<h1 id="firstHeading" class="firstHeading">' + infowindowName + '</h1>'+ "<br>" +
-   
-   		'<div id="bodyContent">'+ '<p>Address here' + '</p>' + '<br>' +
-   		'<p>' + '<a href="https://en.wikipedia.org/w/index.php?title=Uluru&oldid=297882194">'+
-   		'https://en.wikipedia.org/w/index.php?title=link to address here</a>' + ' </p>';
-
+    	"<div class='infoWindow'>"+
+	    	"<h1 class='infoHeading'>THE BEST "  + searchTerm.toUpperCase() + "</h1>" +
+	    	"<br>" +
+	    	"<address class='infoAddress'>" +
+	     		"<h3 class='infoName'>" + bestData.name + "</h3>"+
+	     		bestData.location.display_address[0] + "<br>" +
+	    		bestData.location.display_address[1] + "<br>" +
+	     		bestData.display_phone + "</p>" +   	    		
+	   			"<p>" + 
+	   				"<a href=" + bestData.url + ">" + "Visit On Yelp</a>" + 
+	   			"</p>" +
+	   		"</address>"+	
+		"</div>";
      
         
-        var infowindow = new google.maps.InfoWindow({
-         content: infoWindowData
-       	});
+    var infowindow = new google.maps.InfoWindow({content: infoWindowData});
 
    	marker.addListener('click', function() {      
 
@@ -279,15 +279,15 @@ function addMarker(	businessInfo)//locationInfo object containing
 
 }//END addMarker()
 
+//=================================== THE END =======================================
 
 
 
 		/*=======================================================================
 		==========================================================================
-		========================= TEST FUNCTIONS BELOW THIS LINE =================
+		======================= TEST FUNCTIONS BELOW THIS LINE ===================
 		=========================================================================
 		========================================================================*/
-
 
 
 				function test(yelpBusArray)
@@ -297,15 +297,15 @@ function addMarker(	businessInfo)//locationInfo object containing
 					console.log("===== yelpBusArray results =========");
 					console.log("number of businesses: " + yelpBusArray.length);
 
-					// yelpBusArray.forEach(function(element)
-					// {
-					// 	console.log("rating: " + element.rating);
-					// 	console.log("review count: " + element.review_count);
-					// 	console.log("distance: " + element.distance);		
-					// 	console.log("-------------------------------");
-					// });
-					console.log("========= THE BEST ==========");
-					console.log(yelpBusArray[0]);
+					yelpBusArray.forEach(function(element)
+					{
+						console.log("name: " + element.name);
+						//console.log("rating: " + element.rating);
+						//console.log("review count: " + element.review_count);
+						console.log("distance: " + element.distance);		
+						console.log("-------------------------------");
+					});
+				
 
 
 				}//END TEST()

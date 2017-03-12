@@ -1,19 +1,37 @@
 
 
 
- #map {
+ #map 
+ {
 
- 		margin-top: 30px;
- 		margin-bottom: 30px;
-        height: 400px;
-        width: 100%;
-       }
+	margin-top: 30px;
+	margin-bottom: 30px;
+	height: 400px;
+	width: 100%;
+}
 
 div.jumbotron
 {
 
 	padding-top: 0;
 	padding-bottom: 0;
+}
+
+
+
+/*   ---------- Style for info window on marker -------------*/
+.infoHeading
+{
+	
+}
+
+.infoAddress
+{
 
 }
 
+.infoName
+{
+
+
+}
